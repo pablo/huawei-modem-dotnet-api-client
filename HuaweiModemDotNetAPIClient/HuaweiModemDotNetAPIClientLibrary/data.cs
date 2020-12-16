@@ -140,11 +140,14 @@ namespace huaweisms.data {
     public class ApiCtx
     {
 
+        private Queue<string> requestVerificationTokens;
+
         public ApiCtx(ApiConfig config)
         {
             this.Config = config;
-            this.Session = new HttpSession(config);
             this.LoggedIn = false;
+            this.requestVerificationTokens = new Queue<string>();
+            this.Session = new HttpSession(this);
         }
 
         public ApiConfig Config
@@ -162,14 +165,40 @@ namespace huaweisms.data {
             get; set;
         }
 
-        public string TokInfo
+        public bool LoggedIn
         {
             get; set;
         }
 
-        public bool LoggedIn
+        public void AddRequestVerificationToken(string verificationToken)
         {
-            get; set;
+            requestVerificationTokens.Enqueue(verificationToken);
+        }
+
+        public void AddRequestVerificationToken(string[] verificationTokens)
+        {
+            foreach (string verificationToken in verificationTokens)
+            {
+                AddRequestVerificationToken(verificationToken);
+            }
+        }
+
+        public string NextRequestVerificationToken()
+        {
+            return requestVerificationTokens.Dequeue();
+        }
+
+        public string CurrentRequestVerificationToken()
+        {
+            return requestVerificationTokens.Peek();
+        }
+
+        public int VerificationTokensCount
+        {
+            get
+            {
+                return requestVerificationTokens.Count;
+            }
         }
 
     }

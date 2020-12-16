@@ -2,6 +2,7 @@
 
 using huaweisms.data;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -12,23 +13,25 @@ namespace huaweisms.http
     public class HttpSession
     {
 
-        public HttpSession(ApiConfig apiConfig)
+        const string REQUEST_VERIFICATION_TOKEN_HEADER = "__RequestVerificationToken";
+        const string SET_COOKIE_HEADER = "Set-Cookie";
+        const string COOKIE_HEADER = "Cookie";
+        const string SESSION_ID_COOKIE = "SessionID";
+
+
+        public HttpSession(ApiCtx apiCtx)
         {
-            this.ApiConfig = apiConfig;
-
-
+            this.config = apiCtx.Config;
+            this.ctx = apiCtx;
             // setup http client
-            CookieContainer = new CookieContainer();
-            HttpClientHandler = new HttpClientHandler();
-            HttpClientHandler.CookieContainer = CookieContainer;
-            HttpClient = new HttpClient(HttpClientHandler);
-            HttpClientHandler.UseCookies = true;
-            CookieContainer.Add(new Cookie("testc", "ookie")
-            {
-                Domain = "192.168.8.1"
-            });
-            HttpClient.Timeout = TimeSpan.FromMilliseconds(apiConfig.HttpTimeout);
+            HttpClient = new HttpClient();
+            HttpClient.Timeout = TimeSpan.FromMilliseconds(config.HttpTimeout);
+
         }
+
+        private ApiConfig config;
+        private ApiCtx ctx;
+
 
         public ApiConfig ApiConfig
         {
@@ -40,36 +43,80 @@ namespace huaweisms.http
             get; private set;
         }
 
-        public CookieContainer CookieContainer
+
+        private void updateSecurityHeaders(HttpResponseMessage response)
         {
-            get; private set;
+
+            // security headers
+            IEnumerable<string> headerValues;
+            if (response.Headers.TryGetValues(REQUEST_VERIFICATION_TOKEN_HEADER, out headerValues))
+            {
+                foreach (string header in headerValues)
+                {
+                    string[] securityHeaders = header.Split(new char[]{ '#' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (securityHeaders != null && securityHeaders.Length > 0)
+                    {
+                        ctx.AddRequestVerificationToken(securityHeaders);
+                    }
+                }
+            }
+
+            if (response.Headers.TryGetValues(SET_COOKIE_HEADER, out headerValues))
+            {
+                foreach (string header in headerValues)
+                {
+                    if (header.StartsWith(SESSION_ID_COOKIE + "="))
+                    {
+                        ctx.SessionId = header.Substring((SESSION_ID_COOKIE + "=").Length);
+
+                    }
+                }
+            }
+
         }
 
-        public HttpClientHandler HttpClientHandler
+        private void setupRequestHeaders(HttpRequestMessage requestMessage)
         {
-            get; private set;
+            if (ctx.VerificationTokensCount > 0)
+            {
+                requestMessage.Headers.Add(REQUEST_VERIFICATION_TOKEN_HEADER, ctx.NextRequestVerificationToken());
+            }
+            if (ctx.SessionId != null)
+            {
+                requestMessage.Headers.Add(COOKIE_HEADER, $"{SESSION_ID_COOKIE}={ctx.SessionId}");
+            }
         }
-
 
         public ApiResponse HttpGet(String url)
         {
-            var response = HttpClient.GetAsync(url).Result;
-            if (response.IsSuccessStatusCode)
+            using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
             {
-                return ApiResponse.ReadAndCreateApiResponse(response);
+                setupRequestHeaders(requestMessage);
+                var response = HttpClient.SendAsync(requestMessage).Result;
+                if (response.IsSuccessStatusCode)
+                {
+                    updateSecurityHeaders(response);
+                    return ApiResponse.ReadAndCreateApiResponse(response);
+                }
+                throw new Exception("HTTP request failed: " + response.ReasonPhrase);
             }
-            throw new Exception("HTTP request failed: " + response.ReasonPhrase);
         }
 
         internal ApiResponse HttpPostXML(string url, string xml)
         {
-            HttpContent content = new StringContent(xml, Encoding.UTF8, "application/xml");
-            var response = HttpClient.PostAsync(url, content).Result;
-            if (response.IsSuccessStatusCode)
+            using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
             {
-                return ApiResponse.ReadAndCreateApiResponse(response);
+                setupRequestHeaders(requestMessage);
+                requestMessage.Content = new StringContent(xml, Encoding.UTF8, "application/xml");
+                var response = HttpClient.SendAsync(requestMessage).Result;
+                if (response.IsSuccessStatusCode)
+                {
+                    updateSecurityHeaders(response);
+                    return ApiResponse.ReadAndCreateApiResponse(response);
+                }
+                throw new Exception("HTTP request failed: " + response.ReasonPhrase);
+
             }
-            throw new Exception("HTTP request failed: " + response.ReasonPhrase);
         }
     }
 

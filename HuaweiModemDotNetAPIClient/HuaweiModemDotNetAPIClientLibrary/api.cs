@@ -1,4 +1,7 @@
 ﻿using huaweisms.data;
+using System;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace huaweisms.api
 {
@@ -55,14 +58,8 @@ namespace huaweisms.api
             if (response.Response.ContainsKey("SesInfo") && response.Response.ContainsKey("TokInfo"))
             {
                 // setup context values
-                Ctx.TokInfo = response.Response["TokInfo"] as string;
+                Ctx.AddRequestVerificationToken(response.Response["TokInfo"] as string);
                 Ctx.SessionId = (response.Response["SesInfo"] as string).Substring("SessionID=".Length);
-                Ctx.Session.CookieContainer.Add(
-                    new System.Net.Cookie("SessionID", Ctx.SessionId)
-                    {
-                        Domain = "192.168.8.1"
-                    }
-                );
                 return response;
             } 
             else
@@ -85,6 +82,25 @@ namespace huaweisms.api
 
         }
 
+        private string b64_hex_sha256(string value)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                var sha256bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(value));
+                string beforeb64 = BitConverter.ToString(sha256bytes).Replace("-", "").ToLower();
+                return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(beforeb64));
+            }
+        }
+
+        private string getPasswordValue(string loginToken, string username, string password)
+        {
+
+            // password calculation is:
+            // b64(sha256(username + b64(sha256(password)) + loginToken))
+
+            return b64_hex_sha256(username + b64_hex_sha256(password) + loginToken);
+        }
+
         public ApiResponse Login(string username, string password)
         {
             if (Ctx.SessionId == null)
@@ -99,7 +115,7 @@ namespace huaweisms.api
             }
 
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(password);
-            var password4 = System.Convert.ToBase64String(plainTextBytes);
+            var password4 = getPasswordValue(Ctx.CurrentRequestVerificationToken(), username, password);
 
             string xml = $@"<?xml version:""1.0"" encoding=""UTF - 8""?>
 <request>
@@ -109,6 +125,11 @@ namespace huaweisms.api
 </request>";
 
             var response = Ctx.Session.HttpPostXML($"{Ctx.Config.BaseURL}/api/user/login", xml);
+
+            if (response.Response.Count == 0)
+            {
+                Ctx.LoggedIn = true;
+            }
 
             return response;
 
