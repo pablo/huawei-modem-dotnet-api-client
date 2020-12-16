@@ -1,5 +1,9 @@
 
 
+using huaweisms.data;
+using System;
+using System.Net.Http;
+
 namespace huaweisms.http
 {
 
@@ -9,12 +13,11 @@ namespace huaweisms.http
         public HttpSession(ApiConfig apiConfig)
         {
             this.ApiConfig = apiConfig;
-            this.LoggedIn = false;
 
 
             // setup http client
             HttpClient = new HttpClient();
-            HttpClient.Timeout = TimeSpan.FromMilliseconds(config.HttpTimeout);
+            HttpClient.Timeout = TimeSpan.FromMilliseconds(apiConfig.HttpTimeout);
 
         }
 
@@ -26,21 +29,6 @@ namespace huaweisms.http
         public HttpClient HttpClient
         {
             get; private set;
-        }
-
-        public string SessionId
-        {
-            get; set;
-        }
-
-        public string LoginToken
-        {
-            get; set;
-        }
-
-        public bool LoggedIn
-        {
-            get; set;
         }
 
         public ApiResponse HttpGet(String url)
@@ -61,7 +49,14 @@ namespace huaweisms.http
         public string GetSessionTokenInfo(ApiCtx ctx)
         {
 
-            var apiResponse = ctx.HttpGet($"{ctx.Config.BaseURL}/webserver/SesTokInfo");
+            var apiResponse = HttpClient.GetAsync($"{ctx.Config.BaseURL}/webserver/SesTokInfo").Result;
+
+            if (apiResponse.IsSuccessStatusCode)
+            {
+                string content = apiResponse.Content.ReadAsStringAsync().Result;
+
+
+            }
 
 
 

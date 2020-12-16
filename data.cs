@@ -1,4 +1,5 @@
-﻿using System;
+﻿using huaweisms.http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -128,7 +129,7 @@ namespace huaweisms.data {
                     ret.ParseTextResponse(response.Content.ReadAsStringAsync().Result);
                     break;
                 default:
-                    throw new Exception("Response Type: " + ret.Type + " currently not supported";
+                    throw new Exception("Response Type: " + ret.Type + " currently not supported");
             }
 
             return ret;
@@ -148,13 +149,33 @@ namespace huaweisms.data {
         public ApiCtx(ApiConfig config)
         {
             this.Config = config;
-
-
+            this.Session = new HttpSession(config);
+            this.LoggedIn = false;
         }
 
         public ApiConfig Config
         {
             get; private set;
+        }
+
+        public HttpSession Session
+        {
+            get; private set;
+        }
+
+        public string SessionId
+        {
+            get; set;
+        }
+
+        public string TokInfo
+        {
+            get; set;
+        }
+
+        public bool LoggedIn
+        {
+            get; set;
         }
 
     }
