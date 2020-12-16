@@ -64,8 +64,6 @@ namespace huaweisms.data {
 
         private void ParseXmlResponse(string xml)
         {
-            Response["data"] = null;
-
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.LoadXml(xml);
 
@@ -73,13 +71,9 @@ namespace huaweisms.data {
             {
                 if (node.NodeType == XmlNodeType.Element)
                 {
-
+                    Response[node.Name] = node.InnerText;
                 }
-
-
             }
-
-
         }
 
         private void ParseTextResponse(string text)

@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>huawei_modem_dotnet_api_client</RootNamespace>
   </PropertyGroup>
 
 </Project>
