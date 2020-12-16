@@ -56,7 +56,8 @@ namespace huaweisms.http
                     string[] securityHeaders = header.Split(new char[]{ '#' }, StringSplitOptions.RemoveEmptyEntries);
                     if (securityHeaders != null && securityHeaders.Length > 0)
                     {
-                        ctx.AddRequestVerificationToken(securityHeaders);
+                        // only add the first one
+                        ctx.AddRequestVerificationToken(securityHeaders[0]);
                     }
                 }
             }
@@ -83,6 +84,7 @@ namespace huaweisms.http
             }
             if (ctx.SessionId != null)
             {
+                requestMessage.Headers.Remove(COOKIE_HEADER);
                 requestMessage.Headers.Add(COOKIE_HEADER, $"{SESSION_ID_COOKIE}={ctx.SessionId}");
             }
         }

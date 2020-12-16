@@ -30,12 +30,54 @@ namespace huaweisms.api
 
         }
 
-        public void SendSMS()
+        public ApiResponse SendSMS(string phone, string message)
+        {
+            return SendSMS(new string[] { phone }, message);
+
+        }
+
+        public ApiResponse SendSMS(string[] phones, string message)
         {
             if (!Ctx.LoggedIn)
             {
                 throw new System.Exception("You need to call User.Login(user,pass) first");
             }
+
+            if (phones == null || phones.Length == 0)
+            {
+                throw new System.Exception("You need to call providing at least ONE phone number for SMS submission");
+            }
+
+            if (message == null || message.Length == 0)
+            {
+                throw new System.Exception("You need to call providing a non-null non-empty message for SMS submission");
+            }
+
+            string phoneTags = "";
+            foreach (string phone in phones)
+            {
+                phoneTags += $"<Phone>{phone}</Phone>";
+            }
+
+            string xml = $@"<?xml version:""1.0"" encoding=""UTF - 8""?>
+<request>
+    <Index>-1</Index>
+    <Phones>{phoneTags}</Phones>
+    <Sca></Sca>
+    <Content>{message}</Content>
+    <Length>{message.Length}</Length>
+    <Reserved>1</Reserved>
+    <Date>{String.Format("{0:u}", DateTime.Now)}</Date>
+</request>";
+
+            var response = Ctx.Session.HttpPostXML($"{Ctx.Config.BaseURL}/api/sms/send-sms", xml);
+
+            if (response.Response.Count == 0)
+            {
+                Ctx.LoggedIn = true;
+            }
+
+            return response;
 
         }
 
