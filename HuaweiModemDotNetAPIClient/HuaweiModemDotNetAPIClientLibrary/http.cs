@@ -24,7 +24,7 @@ namespace huaweisms.http
             this.config = apiCtx.Config;
             this.ctx = apiCtx;
             // setup http client
-            HttpClient = new HttpClient();
+            HttpClient = new HttpClient(new HttpClientHandler() { UseCookies = false });
             HttpClient.Timeout = TimeSpan.FromMilliseconds(config.HttpTimeout);
 
         }
