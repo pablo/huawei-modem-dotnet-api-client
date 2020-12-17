@@ -72,11 +72,6 @@ namespace huaweisms.api
 
             var response = Ctx.Session.HttpPostXML($"{Ctx.Config.BaseURL}/api/sms/send-sms", xml);
 
-            if (response.Response.Count == 0)
-            {
-                Ctx.LoggedIn = true;
-            }
-
             return response;
 
         }
